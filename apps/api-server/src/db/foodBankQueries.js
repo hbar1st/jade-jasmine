@@ -25,17 +25,24 @@ export async function getAllFoodBanks({id,name,city,province,country}) {
   whereClause = whereClause.length === 0 ? "" : whereClause.length === 1 ? `WHERE ${whereClause}` : `WHERE ${whereClause.join(' AND ')}`;
   
   const { rows } = await pool.query(
-    `SELECT id,name,unit_no,street,city,province,country,postal_code,longitude,latitude,website,phone,fax,charity_registration_no,timezone from foodbanks  ${whereClause} ORDER BY country,province,city;`,
+    `SELECT id,name,unit_no,street,city,province,country,postal_code,longitude,latitude,website,phone,fax,charity_registration_no,timezone FROM foodbanks  ${whereClause} ORDER BY country,province,city;`,
     whereParams,
   );
   return rows;
 }
-/*
-export async function getAllFoodBanks() {
-  logger.info("in getAllFoodBanks");
+
+/**
+ * returns a detailed view of the foodbank and its admin/staff
+ * use only if authorized!
+ * 
+ * @param {*} id 
+ * @returns 
+ */
+export async function getFoodBankById(id) {
+  logger.info("in getFoodBankById");
   const { rows } = await pool.query(
-    "SELECT * from foodbanks INNER JOIN users ON admin=users.id INNER JOIN user_roles AS ur ON users.id=ur.user_id ORDER BY country,province,city;",
-  );
-  return rows;
+    "SELECT * FROM foodbanks AS fb INNER JOIN users ON admin=users.id INNER JOIN user_roles AS ur ON users.id=ur.user_id WHERE fb.id=$1 ORDER BY country,province,city;"
+  , [id]);
+  return rows[0];
 }
-  */
+  
