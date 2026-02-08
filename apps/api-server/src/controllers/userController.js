@@ -9,7 +9,7 @@ import bcrypt from "bcrypt";
 // needed to authenticate the requests
 import jwt from "jsonwebtoken";
 
-import "dotenv/config";
+//import "dotenv/config";
 import { env } from "node:process";
 
 export async function signUp(req, res) {

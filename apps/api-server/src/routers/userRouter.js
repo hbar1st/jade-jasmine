@@ -19,6 +19,7 @@ import * as userValidator from "../validators/userValidator.js";
 
 import AuthError from "../errors/AuthError.js";
 
+/*
 userRouter.get(
   "/authenticate",
   passport.authenticate("jwt", { session: false }),
@@ -37,7 +38,7 @@ userRouter.get(
     }
   },
 );
-
+*/
 
 userRouter
   .route("/signup")

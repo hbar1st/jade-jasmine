@@ -56,6 +56,9 @@ app.use(`${prefix}/`, indexRouter);
 // the router for the user related actions like signup and login etc
 app.use(`${prefix}/user`, userRouter);
 
+// the router for the foodbank relations actions
+app.use(`${prefix}/foodbank`, foodBankRouter);
+
 // Catch-all for unhandled routes (must be placed last but before the error handler)
 app.use((req, res) => {
   res.status(404).json({
