@@ -2,8 +2,8 @@ import { pool } from "./pool.js";
 import logger from "../utils/logger.js";
 //import AppError from "../errors/AppError.js";
 
-export async function getAllFoodBanks({id,name,city,province,country}) {
-  logger.info("in getAllFoodBanks:", id, name, city, province, country);
+export async function getAllFoodBanks({id,name,city,province,country}, limit=10, offset=0) {
+  logger.info("in getAllFoodBanks:", { id, name, city, province, country, limit, offset });
 
   let count = 1;
   const whereParams = [];
@@ -25,7 +25,7 @@ export async function getAllFoodBanks({id,name,city,province,country}) {
   whereClause = whereClause.length === 0 ? "" : whereClause.length === 1 ? `WHERE ${whereClause}` : `WHERE ${whereClause.join(' AND ')}`;
   
   const { rows } = await pool.query(
-    `SELECT id,name,unit_no,street,city,province,country,postal_code,longitude,latitude,website,phone,fax,charity_registration_no,timezone FROM foodbanks  ${whereClause} ORDER BY country,province,city;`,
+    `SELECT id,name,unit_no,street,city,province,country,postal_code,longitude,latitude,website,phone,fax,charity_registration_no,timezone FROM foodbanks  ${whereClause} ORDER BY country,province,city LIMIT ${limit} OFFSET ${offset};`,
     whereParams,
   );
   return rows;

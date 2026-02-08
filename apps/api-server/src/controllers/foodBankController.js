@@ -2,8 +2,6 @@ import AppError from "../errors/AppError.js";
 import * as fbQueries from "../db/foodBankQueries.js";
 import logger from "../utils/logger.js";
 
-
-
 /**
  * this method returns open data that is not private to the food bank (so no admin or staff info returned)
  * @param {} req
@@ -17,8 +15,11 @@ export async function getFoodBank(req, res) {
   const city = req.query.city;
   const province = req.query.province;
   const country = req.query.country;
+  const limit = req.limit; // <===  this is weird as I have no choice but to use req.limit instead of req.query.limit
+  const offset = req.offset; // same situation as limit
+
   logger.info("req.query", req.query);
-  logger.info(`id:  ${req.query.id}`)
+  logger.info(`id:  ${req.query.id}, limit: ${req.query.limit}, offset: ${req.query.offset}`)
   try {
     const foodbanks = await fbQueries.getAllFoodBanks({
       id,
@@ -26,7 +27,7 @@ export async function getFoodBank(req, res) {
       city,
       province,
       country,
-    });
+    }, limit, offset);
     res.status(200).json({ data: foodbanks });
   } catch (error) {
     if (error instanceof AppError) {

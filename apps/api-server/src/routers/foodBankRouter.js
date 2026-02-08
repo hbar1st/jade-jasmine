@@ -15,7 +15,36 @@ import * as fbValidator from "../validators/foodBankValidator.js";
 //import AuthError from "../errors/AuthError.js";
 
 // this route is not protected and will list only public data
-foodBankRouter.route("/").get(fbController.getFoodBank);
+foodBankRouter.route("/").get(
+  (req, res, next) => {
+    const limit = Number(req.query?.limit);
+    if (!limit) {
+      req.limit = 10;
+    } else {
+      if (limit > 50) {
+        req.limit = 50;
+      } else if (limit < 1) {
+        req.limit = 1;
+      } else {
+        req.limit = limit;
+      }
+    }
+    next();
+  },
+  (req, res, next) => {
+    let offset = Number(req.query?.offset);
+    if (!offset || isNaN(offset)) {
+      offset = 0;
+    } else {
+      if (offset < 0) {
+        offset = 0;
+      }
+    }
+    req.offset = offset;
+    next();
+  },
+  fbController.getFoodBank,
+);
 
 // this route is protected. If the current user is an admin it will provide all the available details about the foodbank
 // including a list the admin's id and username (a separate query is needed to get the foodbank staff or hours)
