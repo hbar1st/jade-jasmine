@@ -19,9 +19,15 @@ const foodBankRouter = Router();
 
 //import AuthError from "../errors/AuthError.js";
 
+// this route is not protected so it doesn't return the admin data or the staff data, just generally available data
 foodBankRouter
   .route("/")
   .get(fbController.getFoodBank);
 
   
+  //foodBankRouter.get("/:id", )
+  
+  /**
+   foodBankRouter.get("/:name", fbController.getFoodBank({id}))
+   */
 export default foodBankRouter;

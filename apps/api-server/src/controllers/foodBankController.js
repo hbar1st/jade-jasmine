@@ -9,11 +9,30 @@ import jwt from "jsonwebtoken";
 //import "dotenv/config";
 import { env } from "node:process";
 
+/**
+ * this method returns open data that is not private to the food bank (so no admin or staff info returned)
+ * @param {} req
+ * @param {*} res
+ */
 export async function getFoodBank(req, res) {
-  logger.info("in getFoodBank")
+  logger.info("in getFoodBank");
+
+  const id = req.query.id;
+  const name = req.query.name;
+  const city = req.query.city;
+  const province = req.query.province;
+  const country = req.query.country;
+  logger.info("req.query", req.query);
+  logger.info(`id:  ${req.query.id}`)
   try {
-    const foodbanks = await fbQueries.getAllFoodBanks()
-    res.status(200).json({ data: foodbanks })
+    const foodbanks = await fbQueries.getAllFoodBanks({
+      id,
+      name,
+      city,
+      province,
+      country,
+    });
+    res.status(200).json({ data: foodbanks });
   } catch (error) {
     if (error instanceof AppError) {
       throw error;
