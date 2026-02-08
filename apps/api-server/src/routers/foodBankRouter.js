@@ -14,10 +14,14 @@ import { handleExpressValidationErrors } from "./routerUtil.js";
 const foodBankRouter = Router();
 
 
-import * as foodBankValidator from "../validators/foodBankValidator.js";
+//import * as fbValidator from "../validators/foodBankValidator.js";
 
 
-import AuthError from "../errors/AuthError.js";
+//import AuthError from "../errors/AuthError.js";
 
 foodBankRouter
-  .route("/",fbController.getFoodBank);
+  .route("/")
+  .get(fbController.getFoodBank);
+
+  
+export default foodBankRouter;

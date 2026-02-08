@@ -139,6 +139,6 @@ export async function updateUser(id, {
   logger.info(`Query to be run: ${sqlsnip.join(" ")}`)
 
   const { rows } = await pool.query(sqlsnip.join(" "), params);
-  logger.info("updateUser query result: ", res);
+  logger.info("updateUser query result: ", rows);
   return rows[0];
 }
