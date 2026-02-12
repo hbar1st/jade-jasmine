@@ -10,7 +10,7 @@ export default class AppError extends Error {
 
         // If there is a cause with a stack, append it
     if (cause && cause.stack) {
-      this.stack += `\nCaused by: ${cause.stack}`;
+      this.stackTrace += `\nCaused by: ${cause.stack}`;
     }
 
   }

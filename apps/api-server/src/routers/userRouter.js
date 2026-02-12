@@ -1,4 +1,4 @@
-// Routes belonging to /user 
+// Routes belonging to /user
 
 import { Router } from "express";
 
@@ -11,31 +11,6 @@ import { handleExpressValidationErrors } from "./routerUtil.js";
 import * as userValidator from "../validators/userValidator.js";
 
 const userRouter = Router();
-
-
-
-//import AuthError from "../errors/AuthError.js";
-
-/*
-userRouter.get(
-  "/authenticate",
-  passport.authenticate("jwt", { session: false }),
-  (req, res) => {
-    const user = req.user;
-    if (user) {
-      res
-        .status(200)
-        .json({
-          status: "success",
-          message: "Authorization confirmed.",
-          userid: user.id,
-        });
-    } else {
-      throw new AuthError();
-    }
-  },
-);
-*/
 
 userRouter
   .route("/signup")
@@ -62,14 +37,16 @@ userRouter
     handleExpressValidationErrors,
     userValidator.validateOptionalUserFields,
     handleExpressValidationErrors,
-    userController.updateUser
-)
+    userController.updateUser,
+  )
   .get(
     passport.authenticate("jwt", { session: false }),
     userController.getUser,
   );
-  /* TODO
+/* TODO
   .delete(passport.authenticate("jwt", { session: false }), deleteUser);
   */
+
+  /* TODO GET /user/:id/foodbank for a list of foodbanks that are managed by this user?*/
 
 export default userRouter;

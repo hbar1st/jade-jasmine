@@ -29,18 +29,18 @@ foodBankRouter
     fbController.createFoodBank,
   );
 
-  /**
-   * this function authenticates the user but doesn't give an error back to the client if the user
-   * is not authenticated. It is silent.
-   * 
-   * @param {*} req 
-   * @param {*} res 
-   * @param {*} next 
-   */
+/**
+ * this function authenticates the user but doesn't give an error back to the client if the user
+ * is not authenticated. It is silent.
+ *
+ * @param {*} req
+ * @param {*} res
+ * @param {*} next
+ */
 const silentAuth = (req, res, next) => {
   passport.authenticate("jwt", { session: false }, (err, user) => {
     if (err) {
-      return next(err); 
+      return next(err);
     }
 
     if (user) {
@@ -53,25 +53,36 @@ const silentAuth = (req, res, next) => {
 
 // this route is protected. If the current user is an admin it will provide all the available details about the foodbank
 // including a list the admin's id and username (a separate query is needed to get the foodbank staff or hours)
-// if the current user is not the admin, and the published field is false, this route will return nothing
+// if the current user is not the admin, and the published field is false, this route will return a 403
 foodBankRouter.get(
   "/:id",
   fbValidator.checkFoodBankId,
   handleExpressValidationErrors,
   silentAuth,
   fbController.getFoodBankDetails,
-);
+); //TODO .put()  .delete() ?? - how does one delete a food bank?
 
-foodBankRouter.get(
-  "/:id/hours",
-  fbValidator.checkFoodBankId,
-  handleExpressValidationErrors,
-  fbController.getFoodBankHours,
-);
+foodBankRouter
+  .route("/:id/hours")
+  .get(
+    fbValidator.checkFoodBankId,
+    handleExpressValidationErrors,
+    fbController.getFoodBankHours,
+  )
+  .put(
+    passport.authenticate("jwt", { session: false }),
+    fbValidator.checkFoodBankId,
+    handleExpressValidationErrors,
+    fbValidator.checkAdmin,
+    handleExpressValidationErrors,
+    fbValidator.checkHoursData,
+    handleExpressValidationErrors,
+    fbController.setFoodBankHours
+  ); //TODO .delete()
 
 // this route is protected and retrieves all associated roles including the admin(s)/staffs/volunteers
-foodBankRouter.get(
-  "/:id/staff",
+foodBankRouter.route(
+  "/:id/staff").get(
   passport.authenticate("jwt", { session: false }),
   fbValidator.checkFoodBankId,
   handleExpressValidationErrors,
@@ -80,7 +91,10 @@ foodBankRouter.get(
   fbValidator.checkRole,
   handleExpressValidationErrors,
   fbController.getFoodBankStaff,
-);
+); //TODO .post().put().delete()
 
-
+// TODO
+/*
+foodBankRouter.route(":id/food").get().post().put().delete()
+*/
 export default foodBankRouter;

@@ -186,3 +186,42 @@ export async function addNewFoodBank(adminId, body) {
   logger.info(`row: `, rows[0]);
   return rows["0"];
 }
+
+export async function setHours(fb_id, hoursArr) {
+  logger.info("in setHours:", { fb_id, hours: hoursArr.hours });
+
+  const client = await pool.connect();
+
+  const valuesPlaceholders = [];
+  const values = [];
+
+  let counter = 1;
+  for (const day of hoursArr.hours) {
+    valuesPlaceholders.push(`($${counter++},$${counter++},$${counter++},$${counter++})`);
+    values.push(fb_id),
+    values.push(day.weekday);
+    values.push(day.opening_hr);
+    values.push(day.closing_hr)
+  }
+  try {
+    await client.query("BEGIN");
+
+    // clear old records first
+    await client.query(`DELETE FROM hours WHERE fb_id=$1`, [fb_id]);
+    const sql = `INSERT INTO hours (fb_id, weekday, opening_hr, closing_hr)
+       VALUES ${valuesPlaceholders.join(",")}
+       RETURNING id, weekday, opening_hr, closing_hr, temporarily_closed;`;
+    logger.info('sql: '+sql)
+    // add the new hours next
+    const { rows } = await client.query(sql,values);
+    logger.log
+    await client.query("COMMIT");
+    return rows;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    logger.error("Set food bank hours transaction failed:", error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}

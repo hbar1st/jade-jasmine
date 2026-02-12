@@ -109,6 +109,7 @@ app.use((err, req, res, next) => {
             data: err.data,
           });
         } else {
+          logger.error("stack trace: ", err?.stackTrace)
           res.json({
             statusCode: err.statusCode,
             timestamp: err.timestamp,
@@ -127,7 +128,13 @@ app.use((err, req, res, next) => {
         res.status(500).json({ timestamp, message: INTERNAL_ERROR });
       }
     } else {
-      res.status(500).json({ timestamp, message: INTERNAL_ERROR });
+      res
+        .status(500)
+        .json({
+          timestamp,
+          message: INTERNAL_ERROR,
+          error: err.type === "entity.parse.failed" ? "Unparsable body value" : err,
+        });
     }
   } catch (error) {
     logger.error(error)

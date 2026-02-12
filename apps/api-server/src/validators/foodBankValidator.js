@@ -64,7 +64,7 @@ export async function checkRole(req, _res, next) {
 }
 
 /**
- * tries to confirm the authenticated user is an admin
+ * tries to confirm the authenticated user is an admin for the given food bank
  *
  * @param {*} req
  * @param {*} _res
@@ -255,10 +255,136 @@ const checkPostalCode = () => {
 };
 
 const checkPublished = () => {
-  return body("published").trim().optional({ checkFalsy: true })
-    .isBoolean().withMessage("Published should be set to true or false")
-  .bail().toBoolean()
-}
+  return body("published")
+    .trim()
+    .optional({ checkFalsy: true })
+    .isBoolean()
+    .withMessage("Published should be set to true or false")
+    .bail()
+    .toBoolean();
+};
+
+const checkWeekdays = () => {
+  return body("hours.*.weekday")
+    .trim()
+    .notEmpty()
+    .withMessage("Weekday field is required")
+    .bail()
+    .isInt({ min: 1, max: 7 })
+    .withMessage("Weekday must be an int between 1 and 7")
+    .bail()
+    .toInt();
+};
+
+const checkOpeningHrs = () => {
+  return body("hours.*.opening_hr")
+    .trim()
+    .notEmpty()
+    .withMessage("Opening hour is required")
+    .isTime({ hourFormat: "hour24", mode: "default" })
+    .withMessage("Invalid hour format. Use hh:mm.");
+};
+
+const checkClosingHrs = () => {
+  return body("hours.*.closing_hr")
+    .trim()
+    .notEmpty()
+    .withMessage("Closing hour is required")
+    .bail()
+    .isTime({ hourFormat: "hour24", mode: "default" })
+    .withMessage("Invalid hour format. Use hh:mm.")
+    .bail()
+    .custom((value, { req, pathValues }) => {
+      const index = Number(pathValues[0]);
+      const opening = req.body.hours[index]["opening_hr"];
+      if (!opening) {
+        throw new ValidationError("Unable to verify opening and closing hours");
+      }
+
+      const [openingHH, openingMM] = opening.split(":").map(Number);
+      const [closingHH, closingMM] = value.split(":").map(Number);
+
+      const openingMinutes = openingHH * 60 + openingMM;
+      const closingMinutes = closingHH * 60 + closingMM;
+
+      // just check that the closing hours make sense within the row they're in
+      if (closingMinutes <= openingMinutes) {
+        throw new ValidationError(
+          "Closing hour should be later than the opening hour",
+        );
+      }
+      return true;
+    });
+};
+
+/**
+ * tries to detect when opening hours are in collision in the request
+ * this is not the same as collision detection against the db entries which will need to be checked later
+ */
+const checkHourCollisions = () => {
+  // step 1 - split and sort the array by weekday
+  // step 2 - for each sub-array of entries (belonging to one weekday), sort them by opening_hr
+  // step 3 - compare the opening hour of a subsequent entry with the earlier entry's closing hour to detect a collision
+
+  return body("hours").custom((value) => {
+    const earlierHour = (hourA, hourB) => {
+      const [a_hh, a_mm] = hourA.split(":");
+      const [b_hh, b_mm] = hourB.split(":");
+
+      return a_hh < b_hh || (a_hh === b_hh && a_mm < b_mm);
+    };
+    const weekdaySortedList = {}; // an object containing arrays keyed by their weekday values
+    for (const row of value) {
+      const arr = weekdaySortedList[row.weekday] ?? [];
+      if (arr.length > 0 && earlierHour(row.opening_hr, arr[0].opening_hr)) {
+        
+        if (earlierHour(arr[0].opening_hr, row.closing_hr)) {
+          throw new ValidationError("Detected a collision between opening and closing hours for weekday: "+row.weekday)
+        }
+        arr.unshift(row);
+      } else {
+
+        if (arr.length > 0 && earlierHour(row.opening_hr, arr[arr.length-1].closing_hr)) {
+          throw new ValidationError("Detected a collision between opening and closing hours for weekday: "+row.weekday)
+        }
+        arr.push(row);
+      }
+      
+      weekdaySortedList[row.weekday] = arr;
+    }
+
+    return true;
+  });
+};
+
+const checkHours = () => {
+  return body("hours")
+    .notEmpty()
+    .withMessage("Hours are required")
+    .bail()
+    .isArray({ min: 1 })
+    .withMessage("Hours should be an array of objects")
+    .bail();
+};
+
+export const checkTemporarilyClosedFields = () => {
+  return body("temporarily_closed")
+    .trim()
+    .optional()
+    .isBoolean()
+    .customSanitizer(() => {
+      return false;
+    });
+};
+
+export const checkHoursData = [
+  checkHours(),
+  checkWeekdays(),
+  checkOpeningHrs(),
+  checkClosingHrs(),
+  checkHourCollisions(),
+  checkTemporarilyClosedFields(),
+];
 
 export const checkFoodBankFields = [
   checkFBName(),
@@ -276,10 +402,10 @@ export const checkFoodBankFields = [
   checkTimezone(),
   checkPostalCode(),
   checkPublished(),
-  checkForDuplicate
+  checkForDuplicate,
 ];
 
-async function checkForDuplicate(req,_res,next) {
+async function checkForDuplicate(req, _res, next) {
   const name = req.body.fbname.trim();
   const street = req.body.street.trim();
   const city = req.body.city.trim();
@@ -287,19 +413,31 @@ async function checkForDuplicate(req,_res,next) {
   const country = req.body.country.trim();
 
   try {
-    const rows = await fbQueries.findByNameAndAddress(name, street, city, province, country);
+    const rows = await fbQueries.findByNameAndAddress(
+      name,
+      street,
+      city,
+      province,
+      country,
+    );
     logger.info("result of find duplicate: ", rows);
     if (rows.length > 0) {
-      throw new ValidationError("The name and address are duplicates of another charity.")
+      throw new ValidationError(
+        "The name and address are duplicates of another charity.",
+      );
     }
-    
+
     next();
   } catch (error) {
     if (error instanceof AppError) {
       throw error;
     } else {
       logger.error(error);
-      throw new AppError("Failed to check for duplicate food bank entries.", 500, error)
+      throw new AppError(
+        "Failed to check for duplicate food bank entries.",
+        500,
+        error,
+      );
     }
   }
 }

@@ -65,43 +65,41 @@ export async function getFoodBankDetails(req, res) {
 
   const getFoodBankById = fbQueries.getFoodBankById(id);
 
-  const isAdmin = fbQueries.isAdmin(authUserId, id);
-  Promise.all([getFoodBankById, isAdmin])
-    .then((responses) => {
-      const [foodbank, isAdmin] = responses;
-      logger.info(`admin.id vs req.user.id:  ${foodbank.admin} ${authUserId}`);
-      if (!isAdmin) {
-        if (foodbank.published) {
-          // delete the keys that we shouldn't show
-          delete foodbank.admin;
-          delete foodbank.username;
-          delete foodbank.fb_id;
-          delete foodbank.user_id;
-          delete foodbank.role;
-          delete foodbank.email;
-          logger.info(
-            "this user is not the admin, so hide some details:",
-            foodbank,
-          );
-          
-          res.status(200).json({ data: foodbank });
-        } else {
-          res
-            .status(403)
-            .json({ data: "You are not authorized to access this resource" }); //return blank as this food bank is not published yet for non-admins
-        }
+  const checkIsAdmin = fbQueries.isAdmin(authUserId, id);
+  try {
+    const responses = await Promise.all([getFoodBankById, checkIsAdmin]);
+
+    const [foodbank, isAdmin] = responses;
+    logger.info(`admin.id vs req.user.id:  ${foodbank.admin} ${authUserId}`);
+    if (!isAdmin) {
+      if (foodbank.published) {
+        // delete the keys that we shouldn't show
+        delete foodbank.admin;
+        delete foodbank.username;
+        delete foodbank.fb_id;
+        delete foodbank.admin_email;
+        logger.info(
+          "this user is not the admin, so hide some details:",
+          foodbank,
+        );
       } else {
-        
-          res.status(200).json({ data: foodbank });
+        res
+          .status(403)
+          .json({ data: "You are not authorized to access this resource" });
+        return;
       }
-    })
-    .catch((error) => {
-      if (error instanceof AppError) {
-        throw error;
-      } else {
-        throw new AppError("Failed to get the indicated food bank", 500, error);
-      }
-    });
+    }
+
+    res.status(200).json({ data: foodbank });
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    } else {
+      throw new AppError("Failed to get the indicated food bank", 500, error);
+    }
+  }
+
+  return;
 }
 
 /**
@@ -161,7 +159,7 @@ export async function createFoodBank(req, res) {
   try {
     const foodbank = await fbQueries.addNewFoodBank(
       Number(authUserId),
-      req.body,
+      matchedData(req, { includeOptionals: true, locations: ["body"] }),
     );
     if (foodbank) {
       logger.info("created the food bank record");
@@ -176,4 +174,29 @@ export async function createFoodBank(req, res) {
       throw new AppError("Failed to create food bank record", 500, error);
     }
   }
+}
+
+export async function setFoodBankHours(req, res) {
+  logger.info("in addFoodBankHours");
+  const authUserId = req.user.id;
+  const fbId = Number(req.params.id);
+  try {
+    const hours = await fbQueries.setHours(
+      fbId,
+      matchedData(req, { includeOptionals: true, locations: ["body"] }),
+    );
+    if (hours) {
+      logger.info("set the food bank hours");
+      res.status(201).json({ data: hours });
+    } else {
+      throw new AppError("Failed to set the food bank hours", 500);
+    }
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    } else {
+      throw new AppError("Failed to set the food bank hours -", 500, error);
+    }
+  }
+  res.status(201).json({ authUserId, fbId });
 }

@@ -399,9 +399,7 @@ paths:
                     - street
                     - city
                     - country
-                    - secondary_admin_id
                     - charity_id
-                    - hours
                     - admin
                   properties:
                     id:
@@ -414,16 +412,8 @@ paths:
                       type: string
                     admin:
                       $ref: "#/components/schemas/User"
-                    hours:
-                      type: string
                     phone:
                       type: integer
-                    staff:
-                      type: array
-                      items:
-                        type: integer
-                        minimum: 1
-                        description: the id of the employee
                     street:
                       type: string
                       examples:
@@ -448,7 +438,9 @@ paths:
                       type: string
                     postal_code:
                       type: string
-                    secondary_admin_id:
+                    email:
+                      type: string
+                    description:
                       type: string
                   description: The food bank or food pantry entity and all its details.
                 title: GetFoodBankListOk
@@ -485,7 +477,7 @@ paths:
       operationId: getFoodBankList
     post:
       tags:
-        - food bank
+        - completed
       summary: Create food bank
       security:
         - BearerJwt: []
@@ -542,39 +534,75 @@ paths:
                 - province
                 - country
                 - postal_code
-                - staff_ids
                 - phone
                 - street
                 - timezone
+                - description
+                - published
+                - email
               properties:
                 fax:
                   type: integer
+                  description: |
+                    the fax number
+                  examples:
+                    - 5555555555
                 city:
                   type: string
+                  description: the city name
+                  examples:
+                    - Toronto
+                    - Los Angeles
                 name:
                   type: string
+                  description: the name of the charity
+                  examples:
+                    - Toronto Food Bank
                 phone:
                   type: integer
+                  description: the phone number
+                  examples:
+                    - 5555555555
                 street:
                   type: string
+                  description: the street name and number
+                  examples:
+                    - 222 Tomboy St
+                    - 33 Old Time Ave.
                 country:
                   type: string
                 unit_no:
                   type: string
+                  description: the unit no in a building
+                  examples:
+                    - 11a
                 website:
                   type: string
+                  description: the url of the food bank website
+                  examples:
+                    - https://website.ca
                 province:
                   type: string
-                staff_ids:
-                  type: array
-                  items:
-                    type: integer
+                  description: the state/provine or area
+                  examples:
+                    - Ontario
+                    - California
                 charity_no:
                   type: string
+                  description: the charity number
+                  examples:
+                    - "19282"
                 postal_code:
                   type: string
                 timezone:
                   $ref: "#/components/schemas/timezone"
+                  description: the IANA timezone value like America/Toronto
+                description:
+                  type: string
+                published:
+                  type: string
+                email:
+                  type: string
         required: true
         description: The food bank's static data. The authorized user will become the
           primary admin for this food bank.
@@ -1321,6 +1349,147 @@ paths:
               description: the opening hours in a given day for a given food bank
         required: true
         description: modify a single weekday's opening or closing hr
+    post:
+      operationId: addsNewOpeningHoursForTheFoodBank
+      tags:
+        - food bank
+      summary: adds new opening hours for the food bank
+      parameters:
+        - $ref: "#/components/parameters/fb_id"
+      responses:
+        "201":
+          description: The request was successful, and a new resource was created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - fb_id
+                  - weekday
+                  - opening_hr
+                  - closing_hr
+                  - temporarily_closed
+                properties:
+                  id:
+                    type: integer
+                    minimum: 1
+                    description: the unique incremental id of this entry
+                  fb_id:
+                    type: integer
+                  weekday:
+                    type: integer
+                    maximum: 7
+                    minimum: 1
+                    description: 1 means Sunday, 2 is Monday, 3 is Tuesday etc.
+                  closing_hr:
+                    type: string
+                    description: time with timezone
+                  opening_hr:
+                    type: string
+                    description: time with timezone
+                  temporarily_closed:
+                    type: boolean
+                    examples:
+                      - false
+                    description: >-
+                      by default the value is false which means the UI can
+                      display open/closed based on the determination they make
+                      of the client's timezone vs the food bank's timezone
+
+
+                      The admin may set it to true in cases where they want to
+                      override this calculation to force a state of 'Temporarily
+                      Closed' regardless of the day/time.
+                description: the opening hours in a given day for a given food bank
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "403":
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "500":
+          $ref: "#/components/responses/InternalServerErrror"
+      description: adds new opening hours
+      security:
+        - BearerJwt: []
+      requestBody:
+        required: true
+        description: the new opening hours per day
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                required:
+                  - fb_id
+                  - weekday
+                  - opening_hr
+                  - closing_hr
+                  - temporarily_closed
+                properties:
+                  fb_id:
+                    type: integer
+                    description: the id of the food bank we are adding hours to
+                    examples:
+                      - 1
+                      - 12
+                      - 200
+                  weekday:
+                    type: integer
+                    maximum: 7
+                    minimum: 1
+                    description: 1 means Sunday, 2 is Monday, 3 is Tuesday etc.
+                    examples:
+                      - 1
+                      - 2
+                      - 3
+                  closing_hr:
+                    type: string
+                    description: "time in hh:mm "
+                    examples:
+                      - 22:00
+                  opening_hr:
+                    type: string
+                    description: time in hh:mm
+                    examples:
+                      - 10:00
+                  temporarily_closed:
+                    type: boolean
+                    examples:
+                      - false
+                    description: >-
+                      by default the value is false which means the UI can
+                      display open/closed based on the determination they make
+                      of the client's timezone vs the food bank's timezone
+
+
+                      The admin may set it to true in cases where they want to
+                      override this calculation to force a state of 'Temporarily
+                      Closed' regardless of the day/time.
+                description: the opening hours in a given day for a given food bank
+              description: an array of new opening hours to add to the hours array
   /user/{user_id}/foodbank:
     get:
       tags:
@@ -2185,26 +2354,28 @@ components:
       type: object
       required:
         - id
-        - name
         - street
         - city
         - country
         - hours
         - admin
         - timzone
+        - published
+        - fbname
       properties:
         id:
           type: integer
+          description: auto generated id
+          minimum: 1
+          examples:
+            - 1
+            - 2
+            - 3
         fax:
           type: integer
           description: the fax number for this food bank
         city:
           type: string
-        name:
-          type: string
-          examples:
-            - Fancy Food Bank
-          description: the name of the food bank
         admin:
           $ref: "#/components/schemas/User"
         hours:
@@ -2250,6 +2421,23 @@ components:
         postal_code:
           type: string
         charity_registration_no:
+          type: string
+        published:
+          type: boolean
+          description: defaults to true
+          examples:
+            - false
+        fbname:
+          type: string
+          examples:
+            - Fancy Food Bank
+          description: the name of the food bank
+        email:
+          type: string
+          description: the email address of the food bank
+          examples:
+            - hana@email.com
+        description:
           type: string
       description: The food bank or food pantry entity and all its details.
     timezone:
@@ -2372,9 +2560,9 @@ components:
       allowReserved: false
       allowEmptyValue: false
     fb_id:
-      in: path
       name: fb_id
-      style: simple
+      in: path
+      description: the id of the food bank
       required: true
       schema:
         type: integer
@@ -2384,19 +2572,20 @@ components:
           - 5
         description: the id of the food bank
       explode: false
-      description: the id of the food bank
+      style: simple
       allowReserved: false
       allowEmptyValue: true
     limit:
-      in: query
       name: limit
-      style: form
+      in: query
+      description: |-
+        the number of items to return per page of results
+        Default is 50 (min is 1)
+        Field is automatically sanitized
       schema:
         type: integer
       explode: true
-      description: |-
-        the number of items to return per page of results
-        Default is 50
+      style: form
       allowReserved: false
       allowEmptyValue: false
     box_id:
@@ -2414,17 +2603,18 @@ components:
       allowReserved: false
       allowEmptyValue: false
     offset:
-      in: query
       name: offset
-      style: form
-      schema:
-        type: integer
-      explode: true
+      in: query
       description: >-
         the number of rows to offset to (eg. if offset is 20, the first row
         retrieved will be row 20)
 
-        Default is 0.
+        Default is 0. (field is automatically sanitized in case of invalid
+        values)
+      schema:
+        type: integer
+      explode: true
+      style: form
       allowReserved: false
       allowEmptyValue: false
     fb_name:

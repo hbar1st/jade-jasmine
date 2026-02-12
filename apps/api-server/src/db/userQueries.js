@@ -112,8 +112,6 @@ export async function addNewUser(username, email, password) {
   }
 }
 
-
-
 export async function updateUser(id, {
   username,
   email
